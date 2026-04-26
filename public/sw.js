@@ -1,4 +1,4 @@
-const CACHE_NAME = 'elite-md-cache-v3';
+const CACHE_NAME = 'elite-md-cache-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -15,10 +15,10 @@ const ASSETS_TO_CACHE = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS_TO_CACHE))
-  );
   self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS_TO_CACHE).catch(e => console.warn('Cache failed', e)))
+  );
 });
 
 self.addEventListener('activate', event => {
@@ -37,25 +37,35 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   
+  // معالجة طلبات التصفح (navigation) بصرامة لدعم معيار WebAPK Offline
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+        return response;
+      }).catch(() => {
+        return caches.match('./index.html', { ignoreSearch: true }).then(res => res || caches.match('./', { ignoreSearch: true }));
+      })
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
+    caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
         if (cachedResponse) return cachedResponse;
         
         return fetch(event.request).then(networkResponse => {
-            // تجاهل أي استجابات غير صالحة للتخزين (كأخطاء السيرفر)
             if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && networkResponse.type !== 'cors')) {
                 return networkResponse;
             }
-            // استنساخ الاستجابة وحفظها في الـ Cache تلقائياً (مثل ملفات JS و CSS المجزأة بواسطة Vite)
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then(cache => {
                 cache.put(event.request, responseToCache);
             });
             return networkResponse;
         }).catch(error => {
-            console.error('Fetch failed (offline):', error);
-            // فشل جلب الملف بسبب انقطاع الإنترنت (سيستمر التطبيق باستخدام البيانات المخبأة المتاحة)
-            throw error;
+            console.error('Fetch offline:', error);
         });
     })
   );
