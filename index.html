@@ -412,6 +412,92 @@
         .toast.show { bottom: 90px; }
         .toast.error { border-color: var(--danger-color); }
         .toast.warning { border-color: var(--accent-color); }
+
+        /* --- Print Styles --- */
+        .print-container {
+            display: none;
+        }
+
+        @media print {
+            .top-header, .search-bar, .workspace, .quick-nav, .controls-pill, dialog, .toast {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+                height: auto !important;
+                overflow: visible !important;
+                display: block !important;
+            }
+            .print-container {
+                display: block !important;
+                width: 100%;
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-family: 'Cairo', sans-serif;
+                direction: rtl;
+            }
+            #print-root {
+                padding: 20pt !important;
+                max-width: 100%;
+            }
+            #print-root p, #print-root table, #print-root pre {
+                page-break-inside: avoid;
+                font-size: 14pt;
+                line-height: 1.6;
+                margin-bottom: 12pt;
+            }
+            #print-root h1, #print-root h2, #print-root h3 {
+                page-break-after: avoid;
+                color: black !important;
+                margin-top: 18pt;
+                margin-bottom: 6pt;
+                font-weight: bold;
+            }
+            #print-root h1 { font-size: 24pt; border-bottom: 1px solid #333; padding-bottom: 4pt; }
+            #print-root h2 { font-size: 18pt; }
+            #print-root h3 { font-size: 16pt; }
+            #print-root pre {
+                border: 1px solid #ccc;
+                padding: 10pt;
+                background-color: #f8f8f8 !important;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                direction: ltr;
+                text-align: left;
+            }
+            #print-root code {
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 12pt;
+                color: #000 !important;
+            }
+            /* للمحافظة على ألوان الأكواد أثناء الطباعة */
+            #print-root .hljs-keyword, #print-root .hljs-built_in { color: #0086b3 !important; }
+            #print-root .hljs-string { color: #183691 !important; }
+            #print-root .hljs-title, #print-root .hljs-number { color: #795da3 !important; }
+
+            #print-root img {
+                max-width: 100%;
+                page-break-inside: avoid;
+            }
+            #print-root a { text-decoration: none; color: black !important; }
+            #print-root ul, #print-root ol {
+                font-size: 14pt;
+                margin-bottom: 12pt;
+                padding-inline-start: 20pt;
+            }
+            #print-root blockquote {
+                border-inline-start: 4pt solid #ccc; 
+                padding-inline-start: 10pt; 
+                margin: 12pt 0; 
+                color: #333; 
+                font-style: italic; 
+            }
+        }
     </style>
 </head>
 <body>
@@ -483,6 +569,10 @@
                 صفحة ويب (.html)
                 <span>ملف جاهز للعرض بتصميمه الحالي وتلوين الأكواد.</span>
             </button>
+            <button class="dialog-option-btn" data-format="pdf" id="btn-print-pdf">
+                طباعة / تصدير كـ (PDF)
+                <span>طباعة أو حفظ عبر واجهة الطباعة النظامية بصيغة PDF.</span>
+            </button>
         </div>
         <div class="dialog-actions">
             <button class="btn-cancel" onclick="document.getElementById('save-modal').close()">إلغاء</button>
@@ -497,6 +587,9 @@
             <button id="btn-confirm-clear" class="btn-danger">نعم، امسح كل شيء</button>
         </div>
     </dialog>
+
+    <!-- حاوية مخصصة للطباعة للورق فقط -->
+    <div id="print-root" class="print-container" dir="rtl"></div>
 
     <script>
         // تسجيل Service Worker لتفعيل PWA
@@ -596,8 +689,12 @@
                 document.querySelectorAll('.dialog-option-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const format = e.currentTarget.dataset.format;
-                        this.elements.saveModal.close();
-                        this.handleExport(format);
+                        if (format === 'pdf') {
+                            this.handlePrint();
+                        } else {
+                            this.elements.saveModal.close();
+                            this.handleExport(format);
+                        }
                     });
                 });
 
@@ -917,6 +1014,38 @@
                 const count = this.state.searchResults.length;
                 const current = count > 0 ? this.state.searchIndex + 1 : 0;
                 this.elements.searchCount.textContent = `${current}/${count}`;
+            },
+
+            handlePrint() {
+                const printRoot = document.getElementById('print-root');
+                const rawHtml = marked.parse(this.state.content || '');
+                const cleanHtml = DOMPurify.sanitize(rawHtml);
+                printRoot.innerHTML = cleanHtml;
+                
+                printRoot.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+                
+                if (window.renderMathInElement) {
+                    renderMathInElement(printRoot, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$', right: '$', display: false},
+                            {left: '\\(', right: '\\)', display: false},
+                            {left: '\\[', right: '\\]', display: true}
+                        ],
+                        throwOnError: false
+                    });
+                }
+
+                const originalTitle = document.title;
+                const baseName = this.state.currentFileName.replace(/\.[^/.]+$/, "");
+                
+                document.title = baseName;
+
+                setTimeout(() => {
+                    window.print();
+                    document.title = originalTitle;
+                    this.elements.saveModal.close();
+                }, 300);
             },
 
             saveDraft() {
