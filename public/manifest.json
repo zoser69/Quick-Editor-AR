@@ -1,13 +1,13 @@
 {
-  "id": "/",
+  "id": "elite-markdown-editor-pwa",
   "name": "محرر ماركداون النخبوي",
-  "short_name": "المحرر النخبوي",
+  "short_name": "النخبوي",
   "description": "محرر نصوص وماركداون احترافي يدعم العمل بدون إنترنت كلياً.",
-  "start_url": "./",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#050505",
-  "theme_color": "#050505",
-  "orientation": "portrait-primary",
+  "theme_color": "#facc15",
+  "orientation": "any",
   "icons": [
     {
       "src": "icon.svg",
