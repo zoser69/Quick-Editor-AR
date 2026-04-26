@@ -1,4 +1,4 @@
-const CACHE_NAME = 'elite-md-cache-v2';
+const CACHE_NAME = 'elite-md-cache-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -35,9 +35,28 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+  
   event.respondWith(
-    caches.match(event.request).then(response => {
-        return response || fetch(event.request);
+    caches.match(event.request).then(cachedResponse => {
+        if (cachedResponse) return cachedResponse;
+        
+        return fetch(event.request).then(networkResponse => {
+            // تجاهل أي استجابات غير صالحة للتخزين (كأخطاء السيرفر)
+            if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && networkResponse.type !== 'cors')) {
+                return networkResponse;
+            }
+            // استنساخ الاستجابة وحفظها في الـ Cache تلقائياً (مثل ملفات JS و CSS المجزأة بواسطة Vite)
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => {
+                cache.put(event.request, responseToCache);
+            });
+            return networkResponse;
+        }).catch(error => {
+            console.error('Fetch failed (offline):', error);
+            // فشل جلب الملف بسبب انقطاع الإنترنت (سيستمر التطبيق باستخدام البيانات المخبأة المتاحة)
+            throw error;
+        });
     })
   );
 });
