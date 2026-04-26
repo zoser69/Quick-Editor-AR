@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <!-- Dark Background -->
+    <rect width="512" height="512" fill="#050505" rx="112"/>
+    
+    <!-- Outer Glow / Accent Border -->
+    <rect width="510" height="510" x="1" y="1" fill="none" stroke="#facc15" stroke-width="4" stroke-opacity="0.3" rx="112"/>
+    
+    <!-- Main Downward Arrow (Markdown Symbolism) -->
+    <path d="M256 360 L140 240 L180 200 L256 276 L332 200 L372 240 Z" fill="#facc15"/>
+    
+    <!-- Crown / Star for "Elite" -->
+    <path d="M190 140 L256 120 L322 140 L290 190 L256 170 L222 190 Z" fill="#fef08a"/>
+    
+    <!-- Elegant Pen Nib Cutout -->
+    <path d="M256 220 L270 245 L256 310 L242 245 Z" fill="#050505"/>
+</svg>

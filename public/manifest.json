@@ -1,0 +1,18 @@
+{
+  "name": "محرر ماركداون النخبوي",
+  "short_name": "المحرر النخبوي",
+  "description": "محرر نصوص وماركداون احترافي يدعم العمل بدون إنترنت كلياً.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

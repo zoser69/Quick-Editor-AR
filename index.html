@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#050505">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
+    
+    <title>محرر ماركداون النخبوي</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #050505;
+            --surface-color: #121212;
+            --surface-elevated: #1e1e1e;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a3a3a3;
+            --accent-color: #facc15;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --glass-bg: rgba(18, 18, 18, 0.75);
+            --font-main: 'Cairo', system-ui, -apple-system, sans-serif;
+            --font-mono: 'Courier New', Courier, monospace;
+            --spacing-base: 1.5rem;
+            --header-height: 60px;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- الشريط العلوي (Top Header) --- */
+        .top-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: var(--header-height);
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+            z-index: 100;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .app-logo {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(250, 204, 21, 0.2);
+            flex-shrink: 0;
+            background: var(--surface-color);
+            padding: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .header-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .file-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stats {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .action-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-family: var(--font-main);
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn:hover, .action-btn:active {
+            background: var(--surface-elevated);
+            color: var(--text-primary);
+        }
+
+        .action-btn.icon-btn {
+            padding: 6px 8px;
+        }
+
+        .action-btn.danger {
+            color: var(--danger-color);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .action-btn.accent {
+            color: var(--accent-color);
+            border-color: rgba(250, 204, 21, 0.3);
+        }
+
+        /* --- شريط البحث العائم (Search Bar) --- */
+        .search-bar {
+            position: fixed;
+            top: calc(var(--header-height) + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 12px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            z-index: 105;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            opacity: 1;
+        }
+
+        .search-bar.hidden {
+            top: -100px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .search-input {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: var(--font-main);
+            font-size: 0.9rem;
+            outline: none;
+            width: 220px;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus { border-color: var(--accent-color); }
+        .search-count { font-size: 0.8rem; color: var(--text-secondary); min-width: 35px; text-align: center; font-variant-numeric: tabular-nums; }
+        .search-controls { display: flex; gap: 4px; }
+
+        /* --- منطقة العمل (Workspace) --- */
+        .workspace {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            margin-top: var(--header-height);
+            height: calc(100dvh - var(--header-height));
+            overflow: hidden;
+            background-color: var(--bg-color);
+        }
+
+        .view-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: var(--spacing-base);
+            padding-right: 2rem;
+            padding-bottom: 90px;
+            overflow-y: auto;
+            scroll-behavior: auto;
+            transition: opacity 0.3s ease;
+            unicode-bidi: plaintext;
+            text-align: start;
+            font-family: var(--font-main);
+            font-size: 1.1rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        .view-panel::-webkit-scrollbar { display: none; }
+        .view-panel { -ms-overflow-style: none; scrollbar-width: none; }
+
+        #search-highlights {
+            z-index: 5;
+            color: transparent; 
+            pointer-events: none; 
+        }
+
+        #search-highlights mark {
+            background-color: rgba(250, 204, 21, 0.25);
+            color: transparent;
+            border-radius: 4px;
+            box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.1);
+        }
+
+        #search-highlights mark.active {
+            background-color: rgba(250, 204, 21, 0.8);
+            color: transparent;
+            box-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
+        }
+
+        #editor-panel {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            resize: none;
+            outline: none;
+            z-index: 10;
+        }
+
+        #editor-panel::placeholder { color: var(--text-secondary); font-weight: 300; }
+        #editor-panel::selection { background-color: rgba(255, 255, 255, 0.15); color: #fff; }
+
+        #preview-panel {
+            z-index: 15; 
+            opacity: 0;
+            pointer-events: none;
+            background: var(--bg-color);
+        }
+
+        body.preview-active #editor-panel, body.preview-active #search-highlights { opacity: 0; pointer-events: none; }
+        body.preview-active #preview-panel { opacity: 1; pointer-events: auto; }
+
+        /* تنسيقات الماركداون */
+        #preview-panel h1, #preview-panel h2, #preview-panel h3 { margin-bottom: 1rem; margin-top: 1.5rem; color: var(--text-primary); font-weight: 700; unicode-bidi: plaintext; }
+        #preview-panel h1 { font-size: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        #preview-panel h2 { font-size: 1.5rem; }
+        #preview-panel p { margin-bottom: 1rem; color: var(--text-secondary); unicode-bidi: plaintext; }
+        #preview-panel a { color: var(--accent-color); text-decoration: none; }
+        #preview-panel ul, #preview-panel ol { margin-bottom: 1rem; padding-inline-start: 2rem; color: var(--text-secondary); unicode-bidi: plaintext; }
+        #preview-panel blockquote { border-inline-start: 4px solid var(--accent-color); padding-inline-start: 1rem; margin: 1rem 0; color: var(--text-secondary); font-style: italic; background: var(--surface-color); padding: 1rem; border-radius: 4px; unicode-bidi: plaintext; }
+        #preview-panel pre { padding: 0; margin-bottom: 1rem; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; direction: ltr; text-align: left; }
+        #preview-panel code { font-family: var(--font-mono); font-size: 0.9em; direction: ltr; }
+        #preview-panel p code, #preview-panel li code { background-color: var(--surface-color); color: #e2e8f0; padding: 0.2rem 0.4rem; border-radius: 4px; }
+        #preview-panel pre code { padding: 1rem; display: block; overflow-x: auto; }
+        #preview-panel img { max-width: 100%; border-radius: 8px; margin: 1rem 0; }
+
+        /* --- شريط التنقل المتحرك --- */
+        .quick-nav {
+            position: fixed;
+            right: 8px;
+            top: calc(var(--header-height) + 10px);
+            bottom: 90px;
+            width: 24px;
+            z-index: 90;
+            cursor: pointer;
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+        }
+
+        .quick-nav::before {
+            content: ''; position: absolute; top: 0; bottom: 0; width: 4px; background: var(--border-color); border-radius: 4px; transition: width 0.2s ease;
+        }
+
+        .quick-nav.dragging::before, .quick-nav:hover::before { width: 8px; background: rgba(255, 255, 255, 0.1); }
+
+        .quick-nav-thumb {
+            position: absolute; top: 0; width: 6px; height: 50px; background: var(--text-secondary); border-radius: 6px; transition: width 0.2s ease, background 0.2s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.5); pointer-events: none;
+        }
+
+        .quick-nav.dragging .quick-nav-thumb, .quick-nav:hover .quick-nav-thumb { width: 12px; background: var(--text-primary); }
+
+        /* --- الكبسولة السفلية (Bottom Pill) --- */
+        .controls-pill {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 100px;
+            padding: 6px;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            gap: 4px;
+        }
+
+        .pill-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 8px 20px;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pill-btn.icon-only { padding: 8px 14px; font-size: 1.2rem; }
+        .pill-btn.active { background: var(--surface-color); color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .pill-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* --- النوافذ المنبثقة (Modals & Toasts) --- */
+        dialog {
+            margin: auto;
+            background: var(--surface-color);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 400px;
+            font-family: var(--font-main);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+        }
+
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .dialog-title { font-size: 1.2rem; margin-bottom: 1rem; font-weight: 700; }
+        .dialog-desc { font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.6; }
+        
+        .dialog-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem; }
+        .dialog-option-btn {
+            background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-primary);
+            padding: 12px; border-radius: 8px; font-family: var(--font-main); font-size: 1rem; text-align: right; cursor: pointer; transition: background 0.2s;
+        }
+        .dialog-option-btn:hover { background: var(--surface-elevated); border-color: var(--accent-color); }
+        .dialog-option-btn span { display: block; font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; }
+
+        .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-cancel { background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-family: inherit;}
+        .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 16px; border-radius: 6px; font-weight: 700; cursor: pointer; font-family: inherit;}
+
+        /* إصلاح مشكلة الإشعارات - رفعها من الأسفل بدلاً من الأعلى لتجنب تغطية شريط التحكم العلوي */
+        .toast {
+            position: fixed; 
+            bottom: -100px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            background: var(--glass-bg); 
+            backdrop-filter: blur(8px); 
+            border: 1px solid var(--success-color);
+            color: var(--text-primary); 
+            padding: 10px 20px; 
+            border-radius: 100px; 
+            font-size: 0.9rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            z-index: 1000;
+            transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+        }
+        /* تظهر فوق شريط التحكم السفلي */
+        .toast.show { bottom: 90px; }
+        .toast.error { border-color: var(--danger-color); }
+        .toast.warning { border-color: var(--accent-color); }
+    </style>
+</head>
+<body>
+
+    <header class="top-header">
+        <div class="header-brand">
+            <img src="icon.svg" alt="شعار النخبوي" class="app-logo">
+            <div class="header-info">
+                <span id="display-filename" class="file-name">document.md</span>
+                <div class="stats">
+                    <span id="word-count">0 كلمة</span> • <span id="char-count">0 حرف</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button id="btn-search-toggle" class="action-btn icon-btn" aria-label="بحث في الملف">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </button>
+            <button id="btn-open" class="action-btn" aria-label="فتح ملف">فتح</button>
+            <button id="btn-save-quick" class="action-btn accent" aria-label="حفظ سريع للملف الحالي">حفظ</button>
+            <button id="btn-save-menu" class="action-btn" aria-label="تصدير بصيغ أخرى">تصدير</button>
+            <button id="btn-clear" class="action-btn danger" aria-label="مسح المحتوى">مسح</button>
+        </div>
+    </header>
+
+    <div id="search-bar" class="search-bar hidden">
+        <input type="text" id="search-input" class="search-input" placeholder="بحث مرن (أ، ة، ى)...">
+        <span id="search-count" class="search-count">0/0</span>
+        <div class="search-controls">
+            <button id="btn-search-prev" class="action-btn" aria-label="النتيجة السابقة">↑</button>
+            <button id="btn-search-next" class="action-btn" aria-label="النتيجة التالية">↓</button>
+            <button id="btn-search-close" class="action-btn danger" aria-label="إغلاق البحث">×</button>
+        </div>
+    </div>
+
+    <main class="workspace">
+        <div id="search-highlights" class="view-panel" aria-hidden="true" dir="auto"></div>
+        <textarea id="editor-panel" class="view-panel" dir="auto" placeholder="اكتب أفكارك هنا (يدعم Markdown)..." spellcheck="false" aria-label="محرر النصوص"></textarea>
+        <div id="preview-panel" class="view-panel" dir="auto" aria-label="معاينة النص"></div>
+    </main>
+
+    <div id="quick-nav" class="quick-nav" aria-label="شريط التمرير السريع">
+        <div id="quick-nav-thumb" class="quick-nav-thumb"></div>
+    </div>
+
+    <nav class="controls-pill">
+        <button id="btn-undo" class="pill-btn icon-only" aria-label="تراجع" disabled>↩</button>
+        <button id="btn-edit" class="pill-btn active" aria-pressed="true">تعديل</button>
+        <button id="btn-preview" class="pill-btn" aria-pressed="false">معاينة</button>
+        <button id="btn-redo" class="pill-btn icon-only" aria-label="إعادة" disabled>↪</button>
+    </nav>
+
+    <dialog id="save-modal">
+        <h3 class="dialog-title">تصدير وحفظ باسم</h3>
+        <p class="dialog-desc">اختر الصيغة التي تود حفظ مسودتك بها في ملف جديد.</p>
+        <div class="dialog-options">
+            <button class="dialog-option-btn" data-format="md">
+                Markdown (.md)
+                <span>الملف الأصلي القابل للتعديل بكامل خصائصه.</span>
+            </button>
+            <button class="dialog-option-btn" data-format="txt">
+                نص عادي (.txt)
+                <span>نص خام بدون تنسيقات برمجية.</span>
+            </button>
+            <button class="dialog-option-btn" data-format="html">
+                صفحة ويب (.html)
+                <span>ملف جاهز للعرض بتصميمه الحالي وتلوين الأكواد.</span>
+            </button>
+        </div>
+        <div class="dialog-actions">
+            <button class="btn-cancel" onclick="document.getElementById('save-modal').close()">إلغاء</button>
+        </div>
+    </dialog>
+
+    <dialog id="confirm-modal">
+        <h3 class="dialog-title" style="color: var(--danger-color);">تحذير</h3>
+        <p class="dialog-desc">هل أنت متأكد من مسح المحتوى الحالي بالكامل؟ لا يمكن التراجع عن هذا الإجراء بسهولة.</p>
+        <div class="dialog-actions">
+            <button class="btn-cancel" onclick="document.getElementById('confirm-modal').close()">تراجع</button>
+            <button id="btn-confirm-clear" class="btn-danger">نعم، امسح كل شيء</button>
+        </div>
+    </dialog>
+
+    <script>
+        // تسجيل Service Worker لتفعيل PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => {
+                    console.log('SW registration failed:', err);
+                });
+            });
+        }
+
+        const App = {
+            elements: {
+                editor: document.getElementById('editor-panel'),
+                searchHighlights: document.getElementById('search-highlights'),
+                preview: document.getElementById('preview-panel'),
+                btnEdit: document.getElementById('btn-edit'),
+                btnPreview: document.getElementById('btn-preview'),
+                btnOpen: document.getElementById('btn-open'),
+                btnSaveQuick: document.getElementById('btn-save-quick'),
+                btnSaveMenu: document.getElementById('btn-save-menu'),
+                btnClear: document.getElementById('btn-clear'),
+                btnUndo: document.getElementById('btn-undo'),
+                btnRedo: document.getElementById('btn-redo'),
+                quickNav: document.getElementById('quick-nav'),
+                quickNavThumb: document.getElementById('quick-nav-thumb'),
+                wordCount: document.getElementById('word-count'),
+                charCount: document.getElementById('char-count'),
+                displayFilename: document.getElementById('display-filename'),
+                saveModal: document.getElementById('save-modal'),
+                confirmModal: document.getElementById('confirm-modal'),
+                btnConfirmClear: document.getElementById('btn-confirm-clear'),
+                btnSearchToggle: document.getElementById('btn-search-toggle'),
+                searchBar: document.getElementById('search-bar'),
+                searchInput: document.getElementById('search-input'),
+                searchCount: document.getElementById('search-count'),
+                btnSearchNext: document.getElementById('btn-search-next'),
+                btnSearchPrev: document.getElementById('btn-search-prev'),
+                btnSearchClose: document.getElementById('btn-search-close'),
+                body: document.body
+            },
+            
+            state: {
+                content: '',
+                mode: 'edit',
+                storageKey: 'elite_md_draft',
+                fileHandle: null,
+                currentFileName: 'document.md',
+                isDraggingNav: false,
+                historyStack: [],
+                historyIndex: -1,
+                searchResults: [],
+                searchIndex: -1
+            },
+
+            init() {
+                this.bindEvents();
+                this.loadDraft();
+                this.configureMarked();
+                this.updateStats();
+                this.updateFileName();
+                this.saveHistoryState(this.state.content);
+                setTimeout(() => this.updateNavThumb(), 100);
+            },
+
+            configureMarked() {
+                marked.setOptions({ breaks: true, gfm: true });
+            },
+
+            bindEvents() {
+                this.elements.editor.addEventListener('input', this.debounce(() => {
+                    const newVal = this.elements.editor.value;
+                    if (newVal !== this.state.content) {
+                        this.state.content = newVal;
+                        this.saveHistoryState(newVal);
+                        this.saveDraft();
+                        this.updateStats();
+                        this.updateNavThumb();
+                        if (!this.elements.searchBar.classList.contains('hidden')) {
+                            this.executeSearch();
+                        }
+                    }
+                }, 300));
+
+                this.elements.editor.addEventListener('scroll', () => { 
+                    this.elements.searchHighlights.scrollTop = this.elements.editor.scrollTop;
+                    if (!this.state.isDraggingNav) this.updateNavThumb(); 
+                });
+
+                this.elements.btnEdit.addEventListener('click', () => this.setMode('edit'));
+                this.elements.btnPreview.addEventListener('click', () => this.setMode('preview'));
+                this.elements.btnOpen.addEventListener('click', () => this.handleOpen());
+                
+                this.elements.btnSaveQuick.addEventListener('click', () => this.handleQuickSave());
+                this.elements.btnSaveMenu.addEventListener('click', () => this.elements.saveModal.showModal());
+                
+                document.querySelectorAll('.dialog-option-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const format = e.currentTarget.dataset.format;
+                        this.elements.saveModal.close();
+                        this.handleExport(format);
+                    });
+                });
+
+                this.elements.btnClear.addEventListener('click', () => this.elements.confirmModal.showModal());
+                this.elements.btnConfirmClear.addEventListener('click', () => this.executeClear());
+                
+                this.elements.btnUndo.addEventListener('click', () => this.handleUndo());
+                this.elements.btnRedo.addEventListener('click', () => this.handleRedo());
+                
+                this.elements.preview.addEventListener('scroll', () => { if (!this.state.isDraggingNav) this.updateNavThumb(); });
+
+                const qn = this.elements.quickNav;
+                qn.addEventListener('pointerdown', (e) => {
+                    this.state.isDraggingNav = true;
+                    qn.classList.add('dragging');
+                    qn.setPointerCapture(e.pointerId);
+                    this.handleNavDrag(e);
+                });
+                qn.addEventListener('pointermove', (e) => { if (this.state.isDraggingNav) this.handleNavDrag(e); });
+                qn.addEventListener('pointerup', (e) => {
+                    this.state.isDraggingNav = false;
+                    qn.classList.remove('dragging');
+                    qn.releasePointerCapture(e.pointerId);
+                });
+                qn.addEventListener('pointercancel', (e) => {
+                    this.state.isDraggingNav = false;
+                    qn.classList.remove('dragging');
+                    qn.releasePointerCapture(e.pointerId);
+                });
+
+                this.elements.btnSearchToggle.addEventListener('click', () => this.toggleSearch());
+                this.elements.btnSearchClose.addEventListener('click', () => this.toggleSearch(false));
+                
+                this.elements.searchInput.addEventListener('input', () => this.executeSearch());
+                this.elements.searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.navigateSearch(e.shiftKey ? -1 : 1);
+                    }
+                });
+                this.elements.btnSearchNext.addEventListener('click', () => this.navigateSearch(1));
+                this.elements.btnSearchPrev.addEventListener('click', () => this.navigateSearch(-1));
+
+                document.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                        e.preventDefault();
+                        this.handleQuickSave();
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+                        e.preventDefault();
+                        this.toggleSearch(true);
+                    }
+                });
+            },
+
+            showToast(message, type = 'success') {
+                const existing = document.querySelector('.toast');
+                if (existing) existing.remove();
+
+                const toast = document.createElement('div');
+                toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''}`;
+                toast.innerHTML = type === 'success' ? `✓ ${message}` : type === 'warning' ? `⚠ ${message}` : `⚠ ${message}`;
+                document.body.appendChild(toast);
+
+                setTimeout(() => toast.classList.add('show'), 10);
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 400);
+                }, 3000);
+            },
+
+            saveHistoryState(content) {
+                if (this.state.historyIndex < this.state.historyStack.length - 1) {
+                    this.state.historyStack = this.state.historyStack.slice(0, this.state.historyIndex + 1);
+                }
+                this.state.historyStack.push(content);
+                if (this.state.historyStack.length > 50) this.state.historyStack.shift();
+                else this.state.historyIndex++;
+                this.updateHistoryButtons();
+            },
+
+            updateHistoryButtons() {
+                this.elements.btnUndo.disabled = this.state.historyIndex <= 0;
+                this.elements.btnRedo.disabled = this.state.historyIndex >= this.state.historyStack.length - 1;
+            },
+
+            handleUndo() {
+                if (this.state.historyIndex > 0) {
+                    this.state.historyIndex--;
+                    this.applyHistoryState();
+                }
+            },
+
+            handleRedo() {
+                if (this.state.historyIndex < this.state.historyStack.length - 1) {
+                    this.state.historyIndex++;
+                    this.applyHistoryState();
+                }
+            },
+
+            applyHistoryState() {
+                const content = this.state.historyStack[this.state.historyIndex];
+                this.state.content = content;
+                this.elements.editor.value = content;
+                this.saveDraft();
+                this.updateStats();
+                this.updateNavThumb();
+                this.updateHistoryButtons();
+                if (this.state.mode === 'preview') this.renderPreview();
+                if (!this.elements.searchBar.classList.contains('hidden')) this.executeSearch();
+            },
+
+            setMode(mode) {
+                if (this.state.mode === mode) return;
+                this.state.mode = mode;
+
+                if (mode === 'preview') {
+                    this.renderPreview();
+                    this.elements.body.classList.add('preview-active');
+                    this.elements.btnPreview.classList.add('active');
+                    this.elements.btnEdit.classList.remove('active');
+                } else {
+                    this.elements.body.classList.remove('preview-active');
+                    this.elements.btnEdit.classList.add('active');
+                    this.elements.btnPreview.classList.remove('active');
+                    setTimeout(() => {
+                        this.elements.editor.focus();
+                        this.elements.searchHighlights.scrollTop = this.elements.editor.scrollTop;
+                    }, 50);
+                }
+                setTimeout(() => this.updateNavThumb(), 50);
+            },
+
+            renderPreview() {
+                const rawHtml = marked.parse(this.state.content || '*لا يوجد محتوى لعرضه*');
+                const cleanHtml = DOMPurify.sanitize(rawHtml);
+                this.elements.preview.innerHTML = cleanHtml;
+                this.elements.preview.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+                
+                if (window.renderMathInElement) {
+                    renderMathInElement(this.elements.preview, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$', right: '$', display: false},
+                            {left: '\\(', right: '\\)', display: false},
+                            {left: '\\[', right: '\\]', display: true}
+                        ],
+                        throwOnError: false
+                    });
+                }
+            },
+
+            updateStats() {
+                const text = this.state.content;
+                const chars = text.length;
+                const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+                this.elements.wordCount.textContent = `${words} كلمة`;
+                this.elements.charCount.textContent = `${chars} حرف`;
+            },
+
+            updateFileName() {
+                this.elements.displayFilename.textContent = this.state.currentFileName;
+            },
+
+            updateNavThumb() {
+                const activePanel = this.state.mode === 'edit' ? this.elements.editor : this.elements.preview;
+                const maxScroll = activePanel.scrollHeight - activePanel.clientHeight;
+                
+                if (maxScroll <= 0) {
+                    this.elements.quickNavThumb.style.transform = `translateY(0px)`;
+                    this.elements.quickNav.style.opacity = '0.3';
+                    this.elements.quickNav.style.pointerEvents = 'none';
+                    return;
+                }
+                this.elements.quickNav.style.opacity = '1';
+                this.elements.quickNav.style.pointerEvents = 'auto';
+                const percentage = activePanel.scrollTop / maxScroll;
+                const maxThumbY = this.elements.quickNav.clientHeight - this.elements.quickNavThumb.clientHeight;
+                this.elements.quickNavThumb.style.transform = `translateY(${percentage * maxThumbY}px)`;
+            },
+
+            handleNavDrag(e) {
+                const rect = this.elements.quickNav.getBoundingClientRect();
+                const thumbHeight = this.elements.quickNavThumb.clientHeight;
+                const maxThumbY = rect.height - thumbHeight;
+                let y = Math.max(0, Math.min(e.clientY - rect.top - (thumbHeight / 2), maxThumbY));
+                
+                const percentage = maxThumbY > 0 ? y / maxThumbY : 0;
+                const activePanel = this.state.mode === 'edit' ? this.elements.editor : this.elements.preview;
+                activePanel.scrollTop = percentage * (activePanel.scrollHeight - activePanel.clientHeight);
+                if(this.state.mode === 'edit') {
+                    this.elements.searchHighlights.scrollTop = activePanel.scrollTop;
+                }
+                this.elements.quickNavThumb.style.transform = `translateY(${y}px)`;
+            },
+
+            toggleSearch(forceShow = null) {
+                const isHidden = this.elements.searchBar.classList.contains('hidden');
+                const shouldShow = forceShow !== null ? forceShow : isHidden;
+
+                if (shouldShow) {
+                    this.elements.searchBar.classList.remove('hidden');
+                    if (this.state.mode === 'preview') this.setMode('edit');
+                    this.elements.searchInput.focus();
+                    this.elements.searchInput.select();
+                    this.executeSearch();
+                } else {
+                    this.elements.searchBar.classList.add('hidden');
+                    this.state.searchResults = [];
+                    this.state.searchIndex = -1;
+                    this.renderHighlights();
+                    this.elements.editor.focus();
+                }
+            },
+
+            buildArabicRegex(query) {
+                const queryClean = query.replace(/[\u064B-\u065F\u0670]/g, '');
+                const escaped = queryClean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const diacritics = '[\\u064B-\\u065F\\u0670]*';
+                const flexible = escaped.split('').map(char => {
+                    if (/[اأإآ]/.test(char)) return '[اأإآ]' + diacritics;
+                    if (/[هة]/.test(char)) return '[هة]' + diacritics;
+                    if (/[يى]/.test(char)) return '[يى]' + diacritics;
+                    return char + diacritics;
+                }).join('');
+                return new RegExp(flexible, 'gi');
+            },
+
+            executeSearch() {
+                const query = this.elements.searchInput.value;
+                this.state.searchResults = [];
+                this.state.searchIndex = -1;
+                
+                if (!query.trim()) {
+                    this.updateSearchUI();
+                    this.renderHighlights();
+                    return;
+                }
+
+                const regex = this.buildArabicRegex(query);
+                let match;
+                while ((match = regex.exec(this.state.content)) !== null) {
+                    if (match[0].length === 0) { regex.lastIndex++; continue; }
+                    this.state.searchResults.push({ start: match.index, end: match.index + match[0].length });
+                }
+
+                if (this.state.searchResults.length > 0) {
+                    this.state.searchIndex = 0;
+                    this.renderHighlights();
+                    this.scrollToMatch();
+                } else {
+                    this.renderHighlights();
+                }
+                this.updateSearchUI();
+            },
+
+            escapeHTML(str) {
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            },
+
+            renderHighlights() {
+                if (this.state.searchResults.length === 0 || this.elements.searchBar.classList.contains('hidden')) {
+                    this.elements.searchHighlights.innerHTML = '';
+                    return;
+                }
+
+                const text = this.state.content;
+                let html = '';
+                let lastIndex = 0;
+
+                this.state.searchResults.forEach((match, index) => {
+                    html += this.escapeHTML(text.substring(lastIndex, match.start));
+                    
+                    const isActive = index === this.state.searchIndex;
+                    const markClass = isActive ? 'active' : '';
+                    html += `<mark class="${markClass}">${this.escapeHTML(text.substring(match.start, match.end))}</mark>`;
+                    
+                    lastIndex = match.end;
+                });
+                
+                html += this.escapeHTML(text.substring(lastIndex));
+                this.elements.searchHighlights.innerHTML = html;
+            },
+
+            scrollToMatch() {
+                if (this.state.searchIndex === -1 || this.state.searchResults.length === 0) return;
+                
+                const activeMark = this.elements.searchHighlights.querySelector('mark.active');
+                if (activeMark) {
+                    const topPos = activeMark.offsetTop;
+                    const halfEditor = this.elements.editor.clientHeight / 2;
+                    
+                    this.elements.editor.scrollTo({
+                        top: Math.max(0, topPos - halfEditor),
+                        behavior: 'smooth'
+                    });
+                    this.elements.searchHighlights.scrollTop = Math.max(0, topPos - halfEditor);
+                }
+            },
+
+            navigateSearch(direction) {
+                const count = this.state.searchResults.length;
+                if (count === 0) return;
+                
+                if (direction === 1) {
+                    this.state.searchIndex = (this.state.searchIndex + 1) % count;
+                } else {
+                    this.state.searchIndex = (this.state.searchIndex - 1 + count) % count;
+                }
+                
+                this.renderHighlights();
+                this.scrollToMatch();
+                this.updateSearchUI();
+            },
+
+            updateSearchUI() {
+                const count = this.state.searchResults.length;
+                const current = count > 0 ? this.state.searchIndex + 1 : 0;
+                this.elements.searchCount.textContent = `${current}/${count}`;
+            },
+
+            saveDraft() {
+                try { localStorage.setItem(this.state.storageKey, this.state.content); } catch (e) {}
+            },
+
+            loadDraft() {
+                try {
+                    const saved = localStorage.getItem(this.state.storageKey);
+                    if (saved) {
+                        this.state.content = saved;
+                        this.elements.editor.value = saved;
+                    }
+                } catch (e) {}
+            },
+
+            async handleOpen() {
+                try {
+                    if (window.showOpenFilePicker) {
+                        const [handle] = await window.showOpenFilePicker({
+                            types: [{ description: 'Text/Markdown', accept: { 'text/plain': ['.txt'], 'text/markdown': ['.md', '.markdown'] } }]
+                        });
+                        this.state.fileHandle = handle;
+                        this.state.currentFileName = handle.name;
+                        const file = await handle.getFile();
+                        this.applyOpenedFile(await file.text());
+                    } else {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.md,.txt';
+                        input.onchange = e => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            this.state.currentFileName = file.name;
+                            this.state.fileHandle = null; 
+                            const reader = new FileReader();
+                            reader.onload = event => this.applyOpenedFile(event.target.result);
+                            reader.readAsText(file);
+                        };
+                        input.click();
+                    }
+                } catch (error) { console.warn('Canceled'); }
+            },
+
+            applyOpenedFile(content) {
+                this.elements.editor.value = content;
+                this.state.content = content;
+                this.updateFileName();
+                this.saveHistoryState(content);
+                this.saveDraft();
+                this.updateStats();
+                this.updateNavThumb();
+                this.showToast('تم فتح الملف بنجاح');
+            },
+
+            async handleQuickSave() {
+                const currentText = this.elements.editor.value; 
+                
+                if (this.state.fileHandle) {
+                    try {
+                        const writable = await this.state.fileHandle.createWritable();
+                        await writable.write(currentText);
+                        await writable.close();
+                        this.showToast('تم الحفظ السريع بنجاح');
+                        return;
+                    } catch (error) {
+                        console.warn('Direct save blocked by browser:', error);
+                        this.showToast('صلاحيات المتصفح تمنع التعديل المباشر. جاري التنزيل كبديل...', 'warning');
+                        setTimeout(() => this.handleExport('md'), 1500);
+                        return;
+                    }
+                }
+                
+                this.handleExport('md');
+            },
+
+            async handleExport(format) {
+                const baseName = this.state.currentFileName.replace(/\.[^/.]+$/, "");
+                const exportName = `${baseName}.${format}`;
+                let exportContent = this.elements.editor.value; 
+
+                if (format === 'html') {
+                    const rawHtml = marked.parse(exportContent || '');
+                    const cleanHtml = DOMPurify.sanitize(rawHtml);
+                    exportContent = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${baseName}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<style>
+    body { font-family: 'Cairo', sans-serif; line-height: 1.8; color: #f5f5f5; background: #050505; padding: 2rem; max-width: 800px; margin: 0 auto; unicode-bidi: plaintext; text-align: start; }
+    h1, h2, h3 { color: #fff; border-bottom: 1px solid #333; padding-bottom: 0.5rem; }
+    a { color: #facc15; text-decoration: none; }
+    blockquote { border-inline-start: 4px solid #facc15; padding-inline-start: 1rem; color: #a3a3a3; font-style: italic; background: #121212; padding: 1rem; }
+    pre { direction: ltr; text-align: left; background: #121212; padding: 1rem; border-radius: 6px; overflow-x: auto; border: 1px solid #333; }
+    code { font-family: 'Courier New', Courier, monospace; }
+    p code { background: #121212; padding: 0.2rem 0.4rem; border-radius: 4px; }
+    img { max-width: 100%; border-radius: 8px; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
+<script>
+document.addEventListener('DOMContentLoaded', () => { 
+    document.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block)); 
+    if (window.renderMathInElement) {
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\\\(', right: '\\\\)', display: false},
+                {left: '\\\\[', right: '\\\\]', display: true}
+            ],
+            throwOnError: false
+        });
+    }
+});
+<\/script>
+</head>
+<body>${cleanHtml}</body>
+</html>`;
+                }
+
+                const downloadFallback = () => {
+                    try {
+                        const mimeType = format === 'html' ? 'text/html' : 'text/plain';
+                        const blob = new Blob([exportContent], { type: mimeType });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = exportName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => URL.revokeObjectURL(url), 100);
+                        this.showToast(`تم تنزيل ملف ${format.toUpperCase()} للحفاظ على بياناتك.`);
+                    } catch (e) {
+                        this.showToast('فشل التنزيل بشكل غير متوقع.', 'error');
+                    }
+                };
+
+                try {
+                    if (window.showSaveFilePicker) {
+                        let handleToUse = (format === 'md' || format === 'txt') ? this.state.fileHandle : null;
+                        
+                        if (!handleToUse) {
+                            try {
+                                handleToUse = await window.showSaveFilePicker({
+                                    suggestedName: exportName,
+                                    types: [{
+                                        description: `${format.toUpperCase()} File`,
+                                        accept: format === 'html' ? { 'text/html': ['.html'] } : 
+                                                format === 'md' ? { 'text/markdown': ['.md'] } : { 'text/plain': ['.txt'] }
+                                    }]
+                                });
+                                
+                                if (format !== 'html') {
+                                    this.state.fileHandle = handleToUse;
+                                    this.state.currentFileName = handleToUse.name;
+                                    this.updateFileName();
+                                }
+                            } catch (pickerError) {
+                                if (pickerError.name !== 'AbortError') {
+                                    downloadFallback(); 
+                                }
+                                return;
+                            }
+                        }
+                        
+                        try {
+                            const writable = await handleToUse.createWritable();
+                            await writable.write(exportContent);
+                            await writable.close();
+                            this.showToast(`تم الحفظ بنجاح`);
+                        } catch (writeError) {
+                            downloadFallback();
+                        }
+                    } else {
+                        downloadFallback();
+                    }
+                } catch (error) {
+                    console.warn('Unexpected error', error);
+                    downloadFallback();
+                }
+            },
+
+            executeClear() {
+                this.elements.confirmModal.close();
+                this.state.content = '';
+                this.elements.editor.value = '';
+                this.state.fileHandle = null;
+                this.state.currentFileName = 'document.md';
+                this.updateFileName();
+                this.saveHistoryState('');
+                this.saveDraft();
+                this.updateStats();
+                if (this.state.mode === 'preview') this.renderPreview();
+                this.updateNavThumb();
+                this.elements.editor.focus();
+                this.toggleSearch(false);
+                this.showToast('تم مسح المحتوى');
+            },
+
+            debounce(func, wait) {
+                let timeout;
+                return function (...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func(...args), wait);
+                };
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => App.init());
+    </script>
+</body>
+</html>
