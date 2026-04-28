@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "محرر سريع جداً (Fast Editor)",
+  "description": "A very fast and lightweight markdown editor with mobile-optimized table of contents.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
