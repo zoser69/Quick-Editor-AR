@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked-katex-extension/lib/index.umd.js"></script>
 
     <style>
         :root {
@@ -759,6 +760,9 @@
 
             configureMarked() {
                 marked.setOptions({ breaks: true, gfm: true });
+                if (window.markedKatex) {
+                    marked.use(markedKatex({ throwOnError: false }));
+                }
             },
 
             bindEvents() {
@@ -981,21 +985,12 @@
 
             renderPreview() {
                 const rawHtml = marked.parse(this.state.content || '*لا يوجد محتوى لعرضه*');
-                const cleanHtml = DOMPurify.sanitize(rawHtml);
+                const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                    ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'msubsup', 'munderover', 'munder', 'mover', 'mspace', 'msqrt', 'mroot', 'mfrac', 'mfraction', 'annotation', 'annotation-xml', 'svg', 'path', 'g'],
+                    ADD_ATTR: ['aria-hidden', 'focusable', 'viewBox', 'd', 'x', 'y', 'width', 'height', 'xmlns', 'style', 'class', 'transform', 'display', 'encoding']
+                });
                 this.elements.preview.innerHTML = cleanHtml;
                 this.elements.preview.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
-                
-                if (window.renderMathInElement) {
-                    renderMathInElement(this.elements.preview, {
-                        delimiters: [
-                            {left: '$$', right: '$$', display: true},
-                            {left: '$', right: '$', display: false},
-                            {left: '\\(', right: '\\)', display: false},
-                            {left: '\\[', right: '\\]', display: true}
-                        ],
-                        throwOnError: false
-                    });
-                }
             },
 
             updateStats() {
@@ -1246,23 +1241,14 @@
             handlePrint() {
                 const printRoot = document.getElementById('print-root');
                 const rawHtml = marked.parse(this.state.content || '');
-                const cleanHtml = DOMPurify.sanitize(rawHtml);
+                const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                    ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'msubsup', 'munderover', 'munder', 'mover', 'mspace', 'msqrt', 'mroot', 'mfrac', 'mfraction', 'annotation', 'annotation-xml', 'svg', 'path', 'g'],
+                    ADD_ATTR: ['aria-hidden', 'focusable', 'viewBox', 'd', 'x', 'y', 'width', 'height', 'xmlns', 'style', 'class', 'transform', 'display', 'encoding']
+                });
                 printRoot.innerHTML = cleanHtml;
                 
                 printRoot.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
                 
-                if (window.renderMathInElement) {
-                    renderMathInElement(printRoot, {
-                        delimiters: [
-                            {left: '$$', right: '$$', display: true},
-                            {left: '$', right: '$', display: false},
-                            {left: '\\(', right: '\\)', display: false},
-                            {left: '\\[', right: '\\]', display: true}
-                        ],
-                        throwOnError: false
-                    });
-                }
-
                 const originalTitle = document.title;
                 const baseName = this.state.currentFileName.replace(/\.[^/.]+$/, "");
                 
@@ -1356,7 +1342,10 @@
 
                 if (format === 'html') {
                     const rawHtml = marked.parse(exportContent || '');
-                    const cleanHtml = DOMPurify.sanitize(rawHtml);
+                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                        ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'msubsup', 'munderover', 'munder', 'mover', 'mspace', 'msqrt', 'mroot', 'mfrac', 'mfraction', 'annotation', 'annotation-xml', 'svg', 'path', 'g'],
+                        ADD_ATTR: ['aria-hidden', 'focusable', 'viewBox', 'd', 'x', 'y', 'width', 'height', 'xmlns', 'style', 'class', 'transform', 'display', 'encoding']
+                    });
                     exportContent = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -1377,22 +1366,9 @@
     img { max-width: 100%; border-radius: 8px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
 <script>
 document.addEventListener('DOMContentLoaded', () => { 
     document.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block)); 
-    if (window.renderMathInElement) {
-        renderMathInElement(document.body, {
-            delimiters: [
-                {left: '$$', right: '$$', display: true},
-                {left: '$', right: '$', display: false},
-                {left: '\\\\(', right: '\\\\)', display: false},
-                {left: '\\\\[', right: '\\\\]', display: true}
-            ],
-            throwOnError: false
-        });
-    }
 });
 <\/script>
 </head>

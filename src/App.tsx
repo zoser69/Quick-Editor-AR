@@ -1,246 +1,377 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { Edit2, Eye, List, X } from "lucide-react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
+import { Edit2, Eye, List, X, Search, FileText, ChevronRight, Hash } from "lucide-react";
 import { cn } from "./lib/utils";
 
-// Helper to generate IDs for headings, keeping Arabic characters intact.
+// --- Helpers ---
+
+// A very simple slug generator that preserves Arabic characters
 function createSlug(text: string) {
   return text
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w\u0600-\u06FF\-]+/g, "")
-    .replace(/\-\-+/g, "-")
+    .replace(/\\s+/g, "-")
+    // Keep Arabic letters, numbers, and Latin letters
+    .replace(/[^\\w\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF\\-]+/g, "")
+    .replace(/\\-\\-+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
 
-// Extract pure text from React elements to create slugs
-function getTextFromChildren(children: any): string {
-  if (typeof children === "string") return children;
-  if (typeof children === "number") return String(children);
-  if (Array.isArray(children)) {
-    return children.map(getTextFromChildren).join("");
-  }
-  if (children?.props?.children) {
-    return getTextFromChildren(children.props.children);
-  }
-  return "";
-}
-
-// Custom Markdown renderers for headings with IDs
-const customComponents = {
-  h1: ({ children, ...props }: any) => {
-    const text = getTextFromChildren(children);
-    return (
-      <h1 id={createSlug(text)} className="mt-8 mb-4 text-3xl font-bold text-gray-900" {...props}>
-        {children}
-      </h1>
-    );
-  },
-  h2: ({ children, ...props }: any) => {
-    const text = getTextFromChildren(children);
-    return (
-      <h2 id={createSlug(text)} className="mt-8 mb-4 text-2xl font-bold text-gray-800" {...props}>
-        {children}
-      </h2>
-    );
-  },
-  h3: ({ children, ...props }: any) => {
-    const text = getTextFromChildren(children);
-    return (
-      <h3 id={createSlug(text)} className="mt-6 mb-3 text-xl font-semibold text-gray-800" {...props}>
-        {children}
-      </h3>
-    );
-  },
-  h4: ({ children, ...props }: any) => {
-    const text = getTextFromChildren(children);
-    return (
-      <h4 id={createSlug(text)} className="mt-4 mb-2 text-lg font-semibold text-gray-700" {...props}>
-        {children}
-      </h4>
-    );
-  },
-  p: ({ children, ...props }: any) => (
-    <p className="mb-4 text-gray-700 leading-relaxed" {...props}>
-      {children}
-    </p>
-  ),
-  ul: ({ children, ...props }: any) => (
-    <ul className="mb-4 list-disc list-inside text-gray-700 space-y-1" {...props}>
-      {children}
-    </ul>
-  ),
-  ol: ({ children, ...props }: any) => (
-    <ol className="mb-4 list-decimal list-inside text-gray-700 space-y-1" {...props}>
-      {children}
-    </ol>
-  ),
-  blockquote: ({ children, ...props }: any) => (
-    <blockquote className="my-4 border-r-4 border-blue-500 pr-4 text-gray-600 bg-gray-50 py-2 rounded-l-md" {...props}>
-      {children}
-    </blockquote>
-  ),
-  code: ({ inline, children, ...props }: any) => {
-    return (
-      <code className={cn("font-mono text-sm", inline ? "bg-gray-100 text-pink-600 px-1 py-0.5 rounded" : "block bg-gray-100 p-4 rounded-lg overflow-x-auto text-gray-800 my-4")} {...props}>
-        {children}
-      </code>
-    );
-  },
+// Override marked renderer to add IDs to headings automatically
+const renderer = new marked.Renderer();
+renderer.heading = function (text, level, raw) {
+  // text here can contain HTML if marked parsed inner elements, so we use raw for the slug
+  const id = createSlug(raw);
+  return \`<h\${level} id="\${id}">\${text}</h\${level}>\`;
 };
+marked.setOptions({ renderer });
 
-const DEFAULT_CONTENT = `# محرر تفاعلي خفيف وسريع
+const DEFAULT_CONTENT = \`# محرر الكتب والملفات الضخمة
 
-أهلاً بك في هذا المحرر الذي تم تصميمه خصيصاً ليناسب الهواتف المحمولة ويعالج مشاكل الواجهة القديمة.
+أهلاً بك في هذا المحرر الذي تمت إعادة بنائه بالكامل ليدعم الملفات التي تصل إلى 500 صفحة بدون أي لاج (Lag).
 
-## المميزات الجديدة
+## ما الذي تم إصلاحه؟
+1. **سرعة الكتابة:** الكتابة الآن فورية، لأننا فصلنا واجهة العرض عن مربع النص. يمكنك كتابة آلاف الأسطر ولن تشعر بأي بطء.
+2. **الفهرس الخفيف:** الفهرس الآن يعمل بشكل ممتاز. عند الضغط عليه لن يصعد إلى بداية الصفحة ولن يفتح الكيبورد بشكل مزعج.
+3. **البحث السريع:** تمت إضافة أداة بحث قوية وفائقة السرعة في القائمة الجانبية لتتمكن من إيجاد أي كلمة والقفز إليها في المحرر فوراً.
 
-هنا قمنا بإضافة العديد من التحسينات لجعل التجربة متكاملة وخالية من المشاكل.
-
-### واجهة خفيفة جداً (Lightweight UI)
-تم التخلي عن المكتبات الثقيلة والاعتماد على مكونات مرنة وسريعة الاستجابة لمنع حالة اللاج (Lag) أو بطء التصفح على الأجهزة الضعيفة.
-
-### حل مشكلة الفهرس
-سابقاً، عند الضغط على عنصر في الفهرس:
-1. كان يتم نقلك إلى أعلى الصفحة.
-2. كانت تفتح لوحة المفاتيح (Keyboard) بشكل مزعج لأن محتوى التحرير كان يكتسب التركيز (Focus).
-
-الآن، قمنا بعمل التعديل التالي:
-
-\`\`\`javascript
-const handleTocClick = (e, id) => {
-  e.preventDefault();
-  // إزالة التركيز من أي حقل إدخال لإخفاء لوحة المفاتيح
-  if (document.activeElement instanceof HTMLElement) {
-    document.activeElement.blur();
-  }
-  // التمرير السلس إلى العنصر المطلوب
-  document.getElementById(id)?.scrollIntoView();
-}
-\`\`\`
-
-## الخاتمة والتجربة
-جرب الضغط على أي عنوان في "فهرس المحتويات" (TOC) وستلاحظ أن الشاشة تصعد أو تنزل بانسيابية نحو التفاصيل دون استدعاء الكيبورد إطلاقاً.`;
+## جرب الآن
+يمكنك لصق كتاب كامل هنا وتجربة البحث السريع والتنقل عبر الفهرس.
+\`;
 
 export default function App() {
-  const [content, setContent] = useState(DEFAULT_CONTENT);
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
-  const [isTocOpen, setIsTocOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<"toc" | "search">("toc");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // The 'debounced' state is ONLY used for preview and TOC to avoid lagging the typing.
+  const [debouncedContent, setDebouncedContent] = useState(DEFAULT_CONTENT);
+  
+  // Refs for tracking DOM and state without re-rendering
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const shadowDivRef = useRef<HTMLDivElement>(null);
 
-  // Parse table of contents from markdown content
+  // Search State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{ index: number; snippet: string }[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // --- Handlers ---
+
+  // Handle typing extremely fast without React state updates blocking the thread
+  const handleInput = useCallback(() => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    // Update the preview after 1 second of NO typing.
+    typingTimeoutRef.current = setTimeout(() => {
+      if (textareaRef.current) {
+        setDebouncedContent(textareaRef.current.value);
+      }
+    }, 1000);
+  }, []);
+
+  // Compute HTML for preview using marked and DOMPurify for extreme speed compared to React components
+  const previewHtml = useMemo(() => {
+    try {
+      const rawHtml = marked.parse(debouncedContent) as string;
+      return DOMPurify.sanitize(rawHtml);
+    } catch (e) {
+      return "<p>خطأ في عرض المحتوى</p>";
+    }
+  }, [debouncedContent]);
+
+  // Compute TOC extremely fast using RegExp directly on the text
   const toc = useMemo(() => {
-    const lines = content.split("\n");
     const headings: { id: string; text: string; level: number }[] = [];
-    for (const line of lines) {
-      const match = line.match(/^(#{1,4})\s+(.*)$/);
-      if (match) {
-        const text = match[2];
-        const level = match[1].length;
-        const id = createSlug(text);
-        if (id) {
-          headings.push({ id, text, level });
-        }
+    // This matches markdown headings smoothly
+    const regex = /^(#{1,6})\\s+(.+)$/gm;
+    let match;
+    // Prevent infinite loops safely
+    let loopCount = 0;
+    while ((match = regex.exec(debouncedContent)) !== null && loopCount < 10000) {
+      loopCount++;
+      const text = match[2];
+      const level = match[1].length;
+      const id = createSlug(text);
+      if (id) {
+        headings.push({ id, text, level });
       }
     }
     return headings;
-  }, [content]);
+  }, [debouncedContent]);
 
-  // Handle clicking on a TOC link
-  const handleTocClick = (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
+  // Execute fast string search
+  const runSearch = useCallback((query: string) => {
+    if (!textareaRef.current) return;
+    const text = textareaRef.current.value;
+    
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
 
-    // 1. Remove focus from textarea so the keyboard hides immediately!
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const results = [];
+    let index = lowerText.indexOf(lowerQuery);
+    
+    // Limit to 100 results max for UI performance
+    while (index !== -1 && results.length < 100) {
+      const start = Math.max(0, index - 30);
+      const end = Math.min(text.length, index + query.length + 30);
+      let snippet = text.substring(start, end).replace(/\\n/g, " ");
+      results.push({ index, snippet });
+      index = lowerText.indexOf(lowerQuery, index + 1);
+    }
+    
+    setSearchResults(results);
+    setIsSearching(false);
+  }, []);
+
+  // Handle Search Input
+  const handleSearchInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    setIsSearching(true);
+    
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      runSearch(query);
+    }, 400); // 400ms debounce
+  };
+
+  // Jump smoothly to a TOC heading in Preview
+  const handleTocClick = (id: string) => {
+    // 1. Ensure we hide keyboard without messing up scroll
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
 
-    // 2. If we are on mobile edit view, switch to preview automatically to see the heading
-    if (window.innerWidth < 1024 && activeTab === "edit") {
+    // 2. We must be in preview to see headings
+    if (activeTab === "edit") {
       setActiveTab("preview");
-      // Wait a tick for DOM to render the preview tab before scrolling
-      setTimeout(() => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 50);
-    } else {
-      // Direct scroll
-      const element = document.getElementById(id);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
     }
 
-    // Close the TOC sidebar on mobile
+    // 3. Scroll to element securely. Wait for DOM update if tab just changed.
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        // Find parent scroll container
+        const container = document.getElementById("preview-container");
+        if (container) {
+          // Calculate relative position
+          const top = el.offsetTop - 20; // 20px padding
+          container.scrollTo({ top, behavior: "smooth" });
+        } else {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    }, 100);
+
+    // 4. Close sidebar on mobile
     if (window.innerWidth < 1024) {
-      setIsTocOpen(false);
+      setIsSidebarOpen(false);
+    }
+  };
+
+  // Jump directly to textarea specific index based on search
+  const handleSearchJump = (index: number) => {
+    const textarea = textareaRef.current;
+    const shadow = shadowDivRef.current;
+    if (!textarea || !shadow) return;
+
+    // Switch to edit if not already
+    if (activeTab !== "edit") {
+      setActiveTab("edit");
+    }
+
+    // A fast hack to scroll the textarea precisely without focusing it and opening keyboard
+    // 1. Put the text up to the 'index' inside the shadow div
+    const textBefore = textarea.value.substring(0, index);
+    shadow.textContent = textBefore;
+    
+    // 2. Measure the height
+    const heightBefore = shadow.scrollHeight;
+    
+    // 3. Scroll the textarea
+    // We center the match in the viewport roughly
+    const offset = Math.max(0, heightBefore - (textarea.clientHeight / 2));
+    
+    // Use setTimeout so the UI tab switch finishes first
+    setTimeout(() => {
+      textarea.scrollTo({ top: offset, behavior: "smooth" });
+      
+      // Select the text (does NOT trigger keyboard on mobile if we don't call focus())
+      textarea.setSelectionRange(index, index + searchQuery.length);
+    }, 50);
+
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
     }
   };
 
   return (
-    // Add dir="rtl" for Arabic layout mostly
-    <div className="flex bg-gray-50 h-screen w-full font-sans antialiased" dir="rtl">
+    <div className="flex bg-gray-50 h-screen w-full font-sans antialiased overflow-hidden" dir="rtl">
       
-      {/* --- Sidebar (Table of Contents) --- */}
+      {/* --- Sidebar (TOC & Search) --- */}
       <div
         className={cn(
-          "fixed inset-y-0 right-0 z-40 w-72 bg-white shadow-xl transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:shadow-none lg:border-l border-gray-200 flex flex-col",
-          isTocOpen ? "translate-x-0" : "translate-x-full"
+          "fixed inset-y-0 right-0 z-40 w-80 bg-white shadow-2xl transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:shadow-none lg:border-l border-gray-200 flex flex-col shrink-0",
+          isSidebarOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
-        <div className="p-4 flex items-center justify-between border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <List className="w-5 h-5 text-blue-600" />
-            فهرس المحتويات
-          </h2>
+        {/* Sidebar Header Options */}
+        <div className="flex items-center gap-1 p-2 border-b border-gray-100 bg-gray-50">
           <button
-            onClick={() => setIsTocOpen(false)}
-            className="lg:hidden p-2 text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100"
+            onClick={() => setSidebarTab("toc")}
+            className={cn(
+              "flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-colors",
+              sidebarTab === "toc" ? "bg-white shadow-sm text-blue-600" : "text-gray-500 hover:text-gray-800"
+            )}
           >
-            <X className="w-5 h-5" />
+            <List className="w-4 h-4" /> الفهرس
+          </button>
+          <button
+            onClick={() => setSidebarTab("search")}
+            className={cn(
+              "flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-colors",
+              sidebarTab === "search" ? "bg-white shadow-sm text-blue-600" : "text-gray-500 hover:text-gray-800"
+            )}
+          >
+            <Search className="w-4 h-4" /> البحث
+          </button>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="lg:hidden p-2 text-gray-500 hover:bg-gray-200 rounded-md shrink-0 mr-1"
+          >
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-1">
-          {toc.length === 0 ? (
-            <p className="text-gray-400 text-sm">لا توجد عناوين في المستند</p>
-          ) : (
-            toc.map((heading, i) => (
-              <a
-                key={i}
-                href={\`#\${heading.id}\`}
-                onClick={(e) => handleTocClick(e, heading.id)}
-                className={cn(
-                  "block text-sm text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded px-2 py-1.5 transition-colors text-right",
-                  heading.level === 1 && "font-bold mt-2",
-                  heading.level === 2 && "mr-4",
-                  heading.level === 3 && "mr-8 text-xs",
-                  heading.level === 4 && "mr-12 text-xs text-gray-500"
+
+        {/* Sidebar Body */}
+        <div className="flex-1 overflow-y-auto w-full relative">
+          
+          {/* Table of Contents View */}
+          {sidebarTab === "toc" && (
+            <div className="p-4 space-y-1">
+              {toc.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                  <Hash className="w-8 h-8 mb-2 opacity-20" />
+                  <p className="text-sm">لا توجد عناوين في المستند</p>
+                </div>
+              ) : (
+                toc.map((heading, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleTocClick(heading.id)}
+                    className={cn(
+                      "w-full text-right block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md px-3 py-2 transition-colors",
+                      heading.level === 1 && "font-bold mt-3 text-base text-gray-900 border-b border-gray-100 pb-1 rounded-none",
+                      heading.level === 2 && "mr-3 font-semibold",
+                      heading.level === 3 && "mr-6 text-sm",
+                      heading.level === 4 && "mr-9 text-xs opacity-80",
+                      heading.level >= 5 && "mr-12 text-xs opacity-60"
+                    )}
+                  >
+                    {heading.text}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Search View */}
+          {sidebarTab === "search" && (
+            <div className="flex flex-col h-full bg-white">
+              <div className="p-4 border-b border-gray-100 shrink-0 sticky top-0 bg-white/90 backdrop-blur-sm z-10">
+                <div className="relative">
+                  <Search className="w-5 h-5 text-gray-400 absolute right-3 top-3" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearchInput}
+                    placeholder="ابحث في الكتاب..."
+                    className="w-full bg-gray-100 border-none rounded-lg pr-10 pl-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-gray-800"
+                  />
+                </div>
+                {searchQuery && !isSearching && (
+                  <p className="text-xs text-gray-500 mt-2 pr-1 font-medium">
+                    {searchResults.length === 100 ? "+100 نتيجة" : \`\${searchResults.length} نتائج\`}
+                  </p>
                 )}
-              >
-                {heading.text}
-              </a>
-            ))
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-2">
+                {isSearching ? (
+                  <div className="p-4 text-center text-sm text-gray-500 animate-pulse">جاري البحث...</div>
+                ) : searchResults.length > 0 ? (
+                  <div className="space-y-2">
+                    {searchResults.map((res, i) => {
+                      // Highlight the matched query
+                      const matchIdx = res.snippet.toLowerCase().indexOf(searchQuery.toLowerCase());
+                      const before = res.snippet.substring(0, matchIdx);
+                      const match = res.snippet.substring(matchIdx, matchIdx + searchQuery.length);
+                      const after = res.snippet.substring(matchIdx + searchQuery.length);
+
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handleSearchJump(res.index)}
+                          className="w-full text-right text-sm p-3 rounded-lg hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-all group"
+                        >
+                          <p className="text-gray-600 leading-relaxed max-h-16 overflow-hidden line-clamp-2">
+                            {before}
+                            <mark className="bg-yellow-200 text-yellow-900 px-0.5 rounded font-bold">{match}</mark>
+                            {after}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : searchQuery ? (
+                  <div className="p-8 text-center text-gray-500 text-sm">لا توجد نتائج مطابقة</div>
+                ) : (
+                  <div className="p-8 text-center text-gray-400 text-sm flex flex-col items-center">
+                    <Search className="w-8 h-8 mb-2 opacity-20" />
+                    اكتب للبحث السريع في كامل المستند
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>
 
       {/* --- Main Content Area --- */}
-      <div className="flex-1 flex flex-col min-w-0 max-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen relative">
         
-        {/* Header Options */}
-        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm shrink-0">
-          <div className="flex bg-gray-100 rounded-lg p-1">
+        {/* Top App Bar */}
+        <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-20">
+          
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2 font-semibold text-sm lg:hidden"
+          >
+            <List className="w-5 h-5" /> <span>القائمة</span>
+          </button>
+          
+          <div className="hidden lg:flex items-center gap-2 px-2 text-gray-600 font-bold text-lg">
+            <FileText className="w-5 h-5 text-blue-600" /> محرر الكتب السريع
+          </div>
+
+          <div className="flex bg-gray-100 rounded-lg p-1 border border-gray-200/60">
             <button
               onClick={() => setActiveTab("edit")}
               className={cn(
-                "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                "flex items-center gap-2 px-5 py-1.5 rounded-md text-sm font-bold transition-all",
                 activeTab === "edit"
                   ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  : "text-gray-500 hover:text-gray-800"
               )}
             >
               <Edit2 className="w-4 h-4" />
@@ -249,73 +380,73 @@ export default function App() {
             <button
               onClick={() => setActiveTab("preview")}
               className={cn(
-                "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                "flex items-center gap-2 px-5 py-1.5 rounded-md text-sm font-bold transition-all",
                 activeTab === "preview"
                   ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  : "text-gray-500 hover:text-gray-800"
               )}
             >
               <Eye className="w-4 h-4" />
               معاينة
             </button>
           </div>
-
-          <button
-            onClick={() => setIsTocOpen(!isTocOpen)}
-            className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-1"
-            title="الفهرس"
-          >
-            <List className="w-5 h-5" />
-          </button>
         </header>
 
-        {/* Editor and Preview Split (Side by Side on Desktop, Tabbable on Mobile) */}
-        <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        {/* Workspace */}
+        <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative bg-white">
           
-          {/* Editor block */}
+          {/* -- EDITOR VIEW -- */}
           <div
             className={cn(
-              "flex-1 flex flex-col bg-white border-l border-gray-100",
+              "flex-1 flex flex-col relative",
               activeTab === "edit" ? "flex" : "hidden lg:flex"
             )}
           >
+            {/* The Textarea is UNCONTROLLED for performance. It uses defaultValue and onInput. */}
             <textarea
               ref={textareaRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="اكتب هنا بصيغة ماركداون (Markdown)..."
-              className="flex-1 w-full p-6 resize-none outline-none text-gray-800 text-lg leading-relaxed bg-transparent"
+              defaultValue={DEFAULT_CONTENT}
+              onInput={handleInput}
+              placeholder="اكتب هنا بحرية تامة..."
+              className="flex-1 w-full p-6 lg:p-10 resize-none outline-none text-gray-800 lg:text-lg leading-[1.8] bg-transparent font-medium"
               spellCheck="false"
+            />
+            
+            {/* A hidden DOM element used exactly to measure scroll heights matching the textarea */}
+            <div 
+              ref={shadowDivRef}
+              className="absolute top-0 left-0 -z-10 invisible whitespace-pre-wrap break-words w-full p-6 lg:p-10 lg:text-lg leading-[1.8] font-medium opacity-0 pointer-events-none"
+              aria-hidden="true"
             />
           </div>
 
-          {/* Preview block */}
+          {/* -- PREVIEW VIEW -- */}
           <div
+            id="preview-container"
             className={cn(
-              "flex-1 overflow-y-auto bg-white lg:bg-gray-50",
+              "flex-1 overflow-y-auto bg-gray-50 lg:border-r border-gray-200 scroll-smooth",
               activeTab === "preview" ? "block" : "hidden lg:block lg:max-w-[50%]"
             )}
           >
-            <div className="p-6 lg:p-10 max-w-3xl mx-auto bg-white lg:shadow-[0_2px_12px_rgb(0,0,0,0.04)] lg:my-6 rounded-xl border border-transparent lg:border-gray-100">
-               {/* react-markdown container */}
-              <div className="markdown-body" dir="rtl">
-                <Markdown remarkPlugins={[remarkGfm]} components={customComponents}>
-                  {content}
-                </Markdown>
-              </div>
+            <div className="p-6 lg:p-10 max-w-3xl mx-auto bg-white lg:shadow-sm lg:my-6 rounded-xl border border-transparent lg:border-gray-200 min-h-full">
+              <div 
+                className="prose prose-blue prose-lg max-w-none text-gray-800 prose-headings:font-bold prose-headings:text-gray-900 prose-a:text-blue-600 prose-img:rounded-xl prose-pre:bg-gray-100 prose-pre:text-gray-800" 
+                dir="rtl"
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
             </div>
           </div>
-
         </main>
       </div>
       
-      {/* Overlay for mobile TOC */}
-      {isTocOpen && (
+      {/* Overlay indicating sidebar is open on mobile */}
+      {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/20 z-30 lg:hidden backdrop-blur-sm transition-opacity"
-          onClick={() => setIsTocOpen(false)}
+          className="fixed inset-0 bg-gray-900/40 z-30 lg:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
         />
       )}
     </div>
   );
 }
+
